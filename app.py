@@ -6,13 +6,13 @@ from core.parsers import parse_premmia, parse_moeda_saqua
 from core.formatters import format_currency, generate_whatsapp_summary
 
 st.set_page_config(
-    page_title="Fechamento Financeiro - R2 Auto Posto",
+    page_title="Fechamento Financeiro",
     page_icon="⛽",
     layout="wide"
 )
 
 st.title("⛽ Fechamento Financeiro Diário")
-st.caption("R2 Auto Posto • Leitura Segura em Memória (Sem Armazenamento de Dados)")
+st.caption("• Leitura Segura em Memória (Sem Armazenamento de Dados)")
 
 # 1. SELEÇÃO DA DATA
 st.markdown("### 1. Seleção da Data")
