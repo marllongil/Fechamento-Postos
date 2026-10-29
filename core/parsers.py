@@ -2,7 +2,7 @@ import io
 import pandas as pd
 
 def load_spreadsheet_in_memory(uploaded_file) -> pd.DataFrame:
-    """Lê ficheiros CSV, XLSX, XLS e ODS estritamente na memória RAM."""
+    """Lê arquivos CSV, XLSX, XLS e ODS estritamente na memória RAM."""
     filename = uploaded_file.name.lower()
     file_bytes = uploaded_file.getvalue()
     
@@ -24,8 +24,23 @@ def load_spreadsheet_in_memory(uploaded_file) -> pd.DataFrame:
             return pd.read_csv(io.BytesIO(file_bytes), encoding="latin1")
 
 
+def clean_currency_series(series: pd.Series) -> pd.Series:
+    """Converte valores monetários para float com suporte a formato brasileiro e Arrow."""
+    if pd.api.types.is_numeric_dtype(series):
+        return pd.to_numeric(series, errors="coerce").fillna(0.0).astype(float)
+    
+    # Tratamento para texto com vírgula (R$ 1.250,00 -> 1250.00)
+    str_s = series.astype(str).str.strip().str.replace("R$", "", regex=False).str.strip()
+    has_comma = str_s.str.contains(",", regex=False)
+    
+    cleaned = str_s.copy()
+    cleaned[has_comma] = str_s[has_comma].str.replace(".", "", regex=False).str.replace(",", ".", regex=False)
+    
+    return pd.to_numeric(cleaned, errors="coerce").fillna(0.0).astype(float)
+
+
 def parse_premmia(uploaded_files, target_date_str: str) -> dict:
-    """Processa as folhas de cálculo do App Premmia para a data especificada (DD/MM/AAAA)."""
+    """Processa as planilhas do App Premmia para a data especificada (DD/MM/AAAA)."""
     consolidated_rows = []
     
     for f in uploaded_files:
@@ -44,18 +59,7 @@ def parse_premmia(uploaded_files, target_date_str: str) -> dict:
         if df_filtered.empty:
             continue
 
-        if df_filtered[val_col].dtype == object:
-            df_filtered["_val"] = (
-                df_filtered[val_col]
-                .astype(str)
-                .str.replace("R$", "", regex=False)
-                .str.replace(" ", "", regex=False)
-                .str.replace(".", "", regex=False)
-                .str.replace(",", ".", regex=False)
-                .astype(float)
-            )
-        else:
-            df_filtered["_val"] = df_filtered[val_col].astype(float)
+        df_filtered["_val"] = clean_currency_series(df_filtered[val_col])
             
         for _, row in df_filtered.iterrows():
             consolidated_rows.append({
@@ -94,7 +98,7 @@ def parse_premmia(uploaded_files, target_date_str: str) -> dict:
 
 
 def parse_moeda_saqua(uploaded_files, target_date_str: str) -> dict:
-    """Processa as contas do Moeda Saquá identificando a conta exata e calculando taxas e valores líquidos."""
+    """Processa as contas do Moeda Saquá identificando a conta e calculando taxas e líquidos."""
     contas_data = {}
     
     for f in uploaded_files:
@@ -104,7 +108,6 @@ def parse_moeda_saqua(uploaded_files, target_date_str: str) -> dict:
         date_col = next((c for c in df.columns if "DATA" in str(c).strip().upper()), None)
         val_col = next((c for c in df.columns if str(c).strip().upper() == "VALOR"), None)
         
-        # Procura coluna de conta específica (ex: 'CONTA 1' exato, e não 'NOME CONTA 1')
         acc_col = next((c for c in df.columns if str(c).strip().upper() == "CONTA 1"), None)
         if not acc_col:
             acc_col = next((c for c in df.columns if "CONTA" in str(c).strip().upper() and "NOME" not in str(c).strip().upper()), None)
@@ -124,18 +127,7 @@ def parse_moeda_saqua(uploaded_files, target_date_str: str) -> dict:
         if df_filtered.empty:
             continue
 
-        if df_filtered[val_col].dtype == object:
-            df_filtered["_val"] = (
-                df_filtered[val_col]
-                .astype(str)
-                .str.replace("R$", "", regex=False)
-                .str.replace(" ", "", regex=False)
-                .str.replace(".", "", regex=False)
-                .str.replace(",", ".", regex=False)
-                .astype(float)
-            )
-        else:
-            df_filtered["_val"] = df_filtered[val_col].astype(float)
+        df_filtered["_val"] = clean_currency_series(df_filtered[val_col])
             
         creditos = df_filtered[df_filtered[mov_col] == "C"]["_val"].sum()
         qtd_creditos = len(df_filtered[df_filtered[mov_col] == "C"])
