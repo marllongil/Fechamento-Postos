@@ -6,13 +6,13 @@ from core.parsers import parse_premmia, parse_moeda_saqua
 from core.formatters import format_currency, generate_whatsapp_summary
 
 st.set_page_config(
-    page_title="Fechamento Financeiro",
+    page_title="Fechamento Financeiro Diário",
     page_icon="⛽",
     layout="wide"
 )
 
 st.title("⛽ Fechamento Financeiro Diário")
-st.caption("• Leitura Segura em Memória (Sem Armazenamento de Dados)")
+st.caption("Leitura Segura em Memória (Sem Armazenamento de Dados)")
 
 # 1. SELEÇÃO DA DATA
 st.markdown("### 1. Seleção da Data")
@@ -85,7 +85,8 @@ if saqua_files or premmia_files:
         st.dataframe(pd.DataFrame(table_rows), use_container_width=True, hide_index=True)
         
         c1, c2, c3 = st.columns(3)
-        c1.metric("Total Bruto de Vendas", format_currency(res_saqua["total_bruto"]))
+        # Highlighted gross value
+        c1.markdown(f"**Total Bruto de Vendas**\n# **{format_currency(res_saqua['total_bruto'])}**")
         c2.metric("Total de Taxas (2%)", format_currency(res_saqua["total_taxas"]))
         c3.metric("Total Líquido Creditado", format_currency(res_saqua["total_liquido"]))
 
@@ -102,7 +103,8 @@ if saqua_files or premmia_files:
         st.dataframe(pd.DataFrame(table_p), use_container_width=True, hide_index=True)
         
         p1, p2, p3 = st.columns(3)
-        p1.metric("Recebido (Cartão APP + Pix)", format_currency(res_premmia["recebido"]))
+        # Highlighted gross value
+        p1.markdown(f"**Recebido (Cartão APP + Pix)**\n# **{format_currency(res_premmia['recebido'])}**")
         p2.metric("Descontos Concedidos", format_currency(res_premmia["descontos"]))
         p3.metric("Total Geral Premmia", format_currency(res_premmia["total_geral"]))
 
