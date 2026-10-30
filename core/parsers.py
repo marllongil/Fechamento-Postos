@@ -25,18 +25,17 @@ def load_spreadsheet_in_memory(uploaded_file) -> pd.DataFrame:
 
 
 def clean_currency_series(series: pd.Series) -> pd.Series:
-    """Converte valores monetários para float com suporte a formato brasileiro e Arrow."""
+    """Converte valores monetários para float com suporte seguro ao formato brasileiro."""
     if pd.api.types.is_numeric_dtype(series):
         return pd.to_numeric(series, errors="coerce").fillna(0.0).astype(float)
     
-    # Tratamento para texto com vírgula (R$ 1.250,00 -> 1250.00)
+    # Remove R$ e espaços
     str_s = series.astype(str).str.strip().str.replace("R$", "", regex=False).str.strip()
-    has_comma = str_s.str.contains(",", regex=False)
     
-    cleaned = str_s.copy()
-    cleaned[has_comma] = str_s[has_comma].str.replace(".", "", regex=False).str.replace(",", ".", regex=False)
+    # Remove pontos de milhar de forma absoluta e depois troca a vírgula decimal por ponto
+    str_s = str_s.str.replace(".", "", regex=False).str.replace(",", ".", regex=False)
     
-    return pd.to_numeric(cleaned, errors="coerce").fillna(0.0).astype(float)
+    return pd.to_numeric(str_s, errors="coerce").fillna(0.0).astype(float)
 
 
 def parse_premmia(uploaded_files, target_date_str: str) -> dict:

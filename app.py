@@ -66,8 +66,19 @@ if saqua_files or premmia_files:
     st.markdown("---")
     st.markdown(f"## 📈 Dashboard de Fechamento • {target_date_str}")
     
-    res_premmia = parse_premmia(premmia_files, target_date_str) if premmia_files else None
-    res_saqua = parse_moeda_saqua(saqua_files, target_date_str) if saqua_files else None
+    # Tenta processar Premmia
+    try:
+        res_premmia = parse_premmia(premmia_files, target_date_str) if premmia_files else None
+    except Exception as e:
+        st.error("Erro ao ler as planilhas do App Premmia. Verifique se os arquivos estão corretos.")
+        res_premmia = None
+
+    # Tenta processar Moeda Saquá
+    try:
+        res_saqua = parse_moeda_saqua(saqua_files, target_date_str) if saqua_files else None
+    except Exception as e:
+        st.error("Erro ao ler os extratos do Moeda Saquá. Verifique se os arquivos estão corretos.")
+        res_saqua = None
 
     # Moeda Saquá
     if res_saqua and res_saqua["total_bruto"] > 0:
