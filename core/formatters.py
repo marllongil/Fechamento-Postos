@@ -14,7 +14,7 @@ def generate_whatsapp_summary(data_str: str, premmia: dict, saqua: dict) -> str:
         for k, v in premmia["breakdown"].items():
             lines.append(f"  - {k} ({v['qtd']}): {format_currency(v['total'])}")
         
-        lines.append(f"*RECEBIDO (Cartão APP + Pix): {format_currency(premmia['recebido'])}*")
+        lines.append(f"- Recebido (Cartão APP + Pix): {format_currency(premmia['recebido'])}")
         
         if premmia['descontos'] > 0:
             lines.append(f"  - Descontos Concedidos: {format_currency(premmia['descontos'])}")
@@ -30,7 +30,7 @@ def generate_whatsapp_summary(data_str: str, premmia: dict, saqua: dict) -> str:
             lines.append(f"  - Taxas ({dados['pct_taxa']:.2f}%): {format_currency(dados['taxas'])}")
             lines.append(f"  - Líquido: {format_currency(dados['liquido'])}")
             
-        lines.append(f"*TOTAL BRUTO SAQUÁ: {format_currency(saqua['total_bruto'])}*")
+        lines.append(f"- Total Bruto Saquá: {format_currency(saqua['total_bruto'])}")
         lines.append(f"  - Total Taxas: {format_currency(saqua['total_taxas'])}")
         lines.append(f"Total Líquido Creditado: {format_currency(saqua['total_liquido'])}")
         lines.append("")

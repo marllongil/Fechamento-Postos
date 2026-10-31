@@ -12,11 +12,25 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# CSS Customizado para aparência profissional White-Label
-st.markdown("""
+st.markdown('''
 <style>
+    /* Esconder menus do Streamlit */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+    
+    /* 2. Abas Bloqueadas/Fixas no topo (Sticky) */
+    div[data-testid="stTabs"] {
+        position: sticky;
+        top: 2rem;
+        z-index: 999;
+        background-color: #f4f6f8;
+        padding-bottom: 15px;
+        padding-top: 10px;
+        border-bottom: 1px solid #e2e8f0;
+        border-radius: 0 0 10px 10px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+    
     .stTabs [data-baseweb="tab-list"] {
         gap: 24px;
     }
@@ -30,14 +44,68 @@ st.markdown("""
         font-size: 16px;
         font-weight: 600;
     }
+
+    /* 3. Caixas mais bonitas (Sombras e Efeitos de Hover) */
+    /* Cards de Métricas */
+    div[data-testid="stMetric"] {
+        background-color: #ffffff;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.04);
+        border: 1px solid #e2e8f0;
+        transition: all 0.3s ease;
+    }
+    div[data-testid="stMetric"]:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+        border-color: #0056b3;
+    }
+    
+    /* Tabelas com sombra */
+    .stDataFrame {
+        box-shadow: 0 4px 6px rgba(0,0,0,0.04);
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+    }
+
+    /* Botões com Hover e Sombra */
+    div[data-testid="stButton"] button, div[data-testid="stDownloadButton"] button {
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-radius: 8px;
+    }
+    div[data-testid="stButton"] button:hover, div[data-testid="stDownloadButton"] button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        background-color: #004494; /* Tom mais escuro do azul */
+        color: #ffffff;
+        border-color: #004494;
+    }
+
+    /* 4. Animação de entrada suave (Fade In + Slide Up) */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    /* Aplica animação aos elementos individuais do dashboard */
+    div[data-testid="stMetric"], .stDataFrame, .js-plotly-plot, .stTextArea {
+        animation: fadeInUp 0.6s ease-out forwards;
+    }
 </style>
-""", unsafe_allow_html=True)
+''', unsafe_allow_html=True)
 
 st.title("Fechamento Financeiro Diário")
 st.caption("Processamento Seguro em Memória (Nenhum dado é salvo no servidor)")
 
-# 1. SELEÇÃO DA DATA
-st.markdown("### Seleção da Data")
+# SELEÇÃO DA DATA (Movida para antes das abas, mas sem fixar ela, apenas as abas ficam fixas)
 col_date, _ = st.columns([2, 4])
 with col_date:
     selected_date = st.date_input(
@@ -48,15 +116,12 @@ with col_date:
 
 target_date_str = selected_date.strftime("%d/%m/%Y")
 
-st.markdown("---")
-st.markdown(f"### Inserir Planilhas do dia **{target_date_str}**")
-
-# Layout com Abas em vez de Colunas
+# Layout com Abas Bloqueadas no Topo (Sticky CSS aplicado acima)
 tab_premmia, tab_saqua, tab_pos = st.tabs(["App Premmia", "Moeda Saquá", "Maquininhas de Cartão"])
 
 with tab_premmia:
     premmia_files = st.file_uploader(
-        "Upload Conferência Premmia (Até 5 arquivos)",
+        f"Upload Conferência Premmia ({target_date_str})",
         type=["xlsx", "xls", "csv", "ods"],
         accept_multiple_files=True,
         key="premmia_uploader"
@@ -67,7 +132,7 @@ with tab_premmia:
 
 with tab_saqua:
     saqua_files = st.file_uploader(
-        "Upload Extratos Moeda Saquá (Até 5 arquivos)",
+        f"Upload Extratos Moeda Saquá ({target_date_str})",
         type=["xlsx", "xls", "csv", "ods"],
         accept_multiple_files=True,
         key="saqua_uploader"
@@ -98,7 +163,6 @@ if saqua_files or premmia_files:
         st.error("Erro ao ler os extratos do Moeda Saquá. Verifique se os arquivos estão corretos.")
         res_saqua = None
 
-    # Divisão de tela inteligente (se tiver as 2 planilhas, divide no meio. Se tiver 1, ocupa tudo)
     dash_col1, dash_col2 = st.columns(2)
     show_premmia = res_premmia and res_premmia["total_tx"] > 0
     show_saqua = res_saqua and res_saqua["total_bruto"] > 0
@@ -109,11 +173,10 @@ if saqua_files or premmia_files:
             st.subheader("App Premmia")
             
             p1, p2, p3 = st.columns(3)
-            p1.markdown(f"**Recebido (APP + Pix)**\n### {format_currency(res_premmia['recebido'])}")
+            p1.metric("Recebido (APP + Pix)", format_currency(res_premmia['recebido']))
             p2.metric("Descontos", format_currency(res_premmia["descontos"]))
             p3.metric("Total Geral", format_currency(res_premmia["total_geral"]))
 
-            # Gráfico Donut para Premmia
             if res_premmia["recebido"] > 0:
                 df_chart_p = pd.DataFrame([
                     {"Forma": k, "Valor": v["total"]} 
@@ -141,11 +204,10 @@ if saqua_files or premmia_files:
             st.subheader("Moeda Saquá")
             
             s1, s2, s3 = st.columns(3)
-            s1.markdown(f"**Total Bruto**\n### {format_currency(res_saqua['total_bruto'])}")
+            s1.metric("Total Bruto", format_currency(res_saqua['total_bruto']))
             s2.metric("Taxas (2%)", format_currency(res_saqua["total_taxas"]))
             s3.metric("Líquido", format_currency(res_saqua["total_liquido"]))
 
-            # Gráfico Donut para Moeda Saquá
             if res_saqua["total_bruto"] > 0:
                 df_chart_s = pd.DataFrame({
                     "Categoria": ["Líquido Creditado", "Taxas Retidas"],
@@ -168,7 +230,6 @@ if saqua_files or premmia_files:
                 })
             st.dataframe(pd.DataFrame(table_rows), use_container_width=True, hide_index=True)
 
-    # EXPORTAÇÃO
     st.markdown("---")
     st.markdown("### Exportar Fechamento")
     resumo_whatsapp = generate_whatsapp_summary(target_date_str, res_premmia, res_saqua)
