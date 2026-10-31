@@ -14,18 +14,26 @@ st.set_page_config(
 
 st.markdown('''
 <style>
-    /* Esconder menus do Streamlit */
+    /* Esconder TODO o cabeçalho branco superior e menus do Streamlit */
+    header[data-testid="stHeader"] {
+        display: none !important;
+    }
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     
-    /* 2. Abas Bloqueadas/Fixas no topo (Sticky) */
+    /* Remover o espaço vazio que fica sobrando no topo após esconder o header */
+    .block-container {
+        padding-top: 2rem !important;
+    }
+    
+    /* 2. Abas Bloqueadas/Fixas no topo (Sticky) - Agora coladas exatamente no topo */
     div[data-testid="stTabs"] {
         position: sticky;
-        top: 2rem;
+        top: 0rem; /* Colado perfeitamente no topo */
         z-index: 999;
         background-color: #f4f6f8;
         padding-bottom: 15px;
-        padding-top: 10px;
+        padding-top: 15px; /* Adicionado um respiro superior */
         border-bottom: 1px solid #e2e8f0;
         border-radius: 0 0 10px 10px;
         box-shadow: 0 4px 10px rgba(0,0,0,0.05);
@@ -46,22 +54,30 @@ st.markdown('''
     }
 
     /* 3. Caixas mais bonitas (Sombras e Efeitos de Hover) */
-    /* Cards de Métricas */
     div[data-testid="stMetric"] {
         background-color: #ffffff;
-        padding: 20px;
+        padding: 15px 10px;
         border-radius: 12px;
         box-shadow: 0 4px 6px rgba(0,0,0,0.04);
         border: 1px solid #e2e8f0;
         transition: all 0.3s ease;
+        white-space: nowrap !important;
+        overflow: visible !important;
     }
+    
+    div[data-testid="stMetricValue"] {
+        font-size: clamp(1.2rem, 1.8vw, 1.8rem) !important;
+        white-space: normal !important;
+        word-break: break-all !important;
+        overflow: visible !important;
+    }
+
     div[data-testid="stMetric"]:hover {
         transform: translateY(-4px);
         box-shadow: 0 10px 15px rgba(0,0,0,0.1);
         border-color: #0056b3;
     }
     
-    /* Tabelas com sombra */
     .stDataFrame {
         box-shadow: 0 4px 6px rgba(0,0,0,0.04);
         border-radius: 8px;
@@ -69,7 +85,6 @@ st.markdown('''
         border: 1px solid #e2e8f0;
     }
 
-    /* Botões com Hover e Sombra */
     div[data-testid="stButton"] button, div[data-testid="stDownloadButton"] button {
         transition: all 0.3s ease;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -78,12 +93,11 @@ st.markdown('''
     div[data-testid="stButton"] button:hover, div[data-testid="stDownloadButton"] button:hover {
         transform: translateY(-2px);
         box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-        background-color: #004494; /* Tom mais escuro do azul */
+        background-color: #004494;
         color: #ffffff;
         border-color: #004494;
     }
 
-    /* 4. Animação de entrada suave (Fade In + Slide Up) */
     @keyframes fadeInUp {
         from {
             opacity: 0;
@@ -95,7 +109,6 @@ st.markdown('''
         }
     }
     
-    /* Aplica animação aos elementos individuais do dashboard */
     div[data-testid="stMetric"], .stDataFrame, .js-plotly-plot, .stTextArea {
         animation: fadeInUp 0.6s ease-out forwards;
     }
@@ -105,7 +118,6 @@ st.markdown('''
 st.title("Fechamento Financeiro Diário")
 st.caption("Processamento Seguro em Memória (Nenhum dado é salvo no servidor)")
 
-# SELEÇÃO DA DATA (Movida para antes das abas, mas sem fixar ela, apenas as abas ficam fixas)
 col_date, _ = st.columns([2, 4])
 with col_date:
     selected_date = st.date_input(
@@ -116,7 +128,6 @@ with col_date:
 
 target_date_str = selected_date.strftime("%d/%m/%Y")
 
-# Layout com Abas Bloqueadas no Topo (Sticky CSS aplicado acima)
 tab_premmia, tab_saqua, tab_pos = st.tabs(["App Premmia", "Moeda Saquá", "Maquininhas de Cartão"])
 
 with tab_premmia:
@@ -145,8 +156,6 @@ with tab_pos:
     st.info("Módulo em desenvolvimento. Estará disponível em breve.")
     st.file_uploader("Upload desabilitado", disabled=True, key="pos_disabled")
 
-
-# PROCESSAMENTO E DASHBOARD
 if saqua_files or premmia_files:
     st.markdown("---")
     st.header(f"Dashboard de Fechamento - {target_date_str}")
