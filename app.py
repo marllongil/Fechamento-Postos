@@ -214,7 +214,7 @@ if saqua_files or premmia_files:
             
             s1, s2, s3 = st.columns(3)
             s1.metric("Total Bruto", format_currency(res_saqua['total_bruto']))
-            s2.metric("Taxas (2%)", format_currency(res_saqua["total_taxas"]))
+            s2.metric("Taxas", format_currency(res_saqua["total_taxas"]))
             s3.metric("Líquido", format_currency(res_saqua["total_liquido"]))
 
             if res_saqua["total_bruto"] > 0:
