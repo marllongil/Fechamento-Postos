@@ -11,7 +11,7 @@ Aplicação web desenvolvida em **Python** e **Streamlit** concebida para automa
   - Consolidação por forma de pagamento (Cartão APP, Pix, Desconto, Vale-Premmia, Pontos).
   - Cálculo automático de pagamentos recebidos, descontos e total geral.
 - **Leitura da Moeda Saquá:** 
-  - Reconhecimento automático de contas bancárias a partir dos extratos (ex.: Conta `00 300007785` e Conta `00 300003670`).
+  - Reconhecimento automático de contas bancárias a partir dos extratos.
   - Apuração de vendas brutas, retenção de taxa (2,00%) e valor líquido creditado.
 - **Suporte a Múltiplos Ficheiros:** Carregamento de até 5 folhas de cálculo por slot, suportando formatos `.csv`, `.xlsx`, `.xls` e `.ods`.
 - **Privacidade e Segurança (Zero-Persistence):** 
