@@ -2,7 +2,6 @@ import io
 import pandas as pd
 
 def load_spreadsheet_in_memory(uploaded_file) -> pd.DataFrame:
-    """Lê arquivos CSV, XLSX, XLS e ODS estritamente na memória RAM."""
     filename = uploaded_file.name.lower()
     file_bytes = uploaded_file.getvalue()
     
@@ -23,28 +22,17 @@ def load_spreadsheet_in_memory(uploaded_file) -> pd.DataFrame:
         except Exception:
             return pd.read_csv(io.BytesIO(file_bytes), encoding="latin1")
 
-
 def clean_currency_series(series: pd.Series) -> pd.Series:
-    """Converte valores monetários para float com suporte seguro ao formato brasileiro."""
     if pd.api.types.is_numeric_dtype(series):
         return pd.to_numeric(series, errors="coerce").fillna(0.0).astype(float)
-    
-    # Remove R$ e espaços
     str_s = series.astype(str).str.strip().str.replace("R$", "", regex=False).str.strip()
-    
-    # Remove pontos de milhar de forma absoluta e depois troca a vírgula decimal por ponto
     str_s = str_s.str.replace(".", "", regex=False).str.replace(",", ".", regex=False)
-    
     return pd.to_numeric(str_s, errors="coerce").fillna(0.0).astype(float)
 
-
 def parse_premmia(uploaded_files, target_date_str: str) -> dict:
-    """Processa as planilhas do App Premmia para a data especificada (DD/MM/AAAA)."""
     consolidated_rows = []
-    
     for f in uploaded_files:
         df = load_spreadsheet_in_memory(f)
-        
         date_col = next((c for c in df.columns if "data" in str(c).lower()), None)
         val_col = next((c for c in df.columns if "valor" in str(c).lower()), None)
         pay_col = next((c for c in df.columns if "forma" in str(c).lower() or "pagamento" in str(c).lower()), None)
@@ -71,13 +59,9 @@ def parse_premmia(uploaded_files, target_date_str: str) -> dict:
         return {"total_tx": 0, "breakdown": {}, "recebido": 0.0, "descontos": 0.0, "pontos": 0.0, "vales": 0.0, "total_geral": 0.0}
 
     df_res = pd.DataFrame(consolidated_rows)
-    
     breakdown = {}
     for forma, grp in df_res.groupby("forma_pagamento"):
-        breakdown[forma] = {
-            "qtd": len(grp),
-            "total": grp["valor"].sum()
-        }
+        breakdown[forma] = {"qtd": len(grp), "total": grp["valor"].sum()}
         
     recebido = df_res[df_res["forma_pagamento"].str.upper().isin(["CARTÃO APP", "CARTAO APP", "PIX"])]["valor"].sum()
     descontos = df_res[df_res["forma_pagamento"].str.upper() == "DESCONTO"]["valor"].sum()
@@ -86,27 +70,17 @@ def parse_premmia(uploaded_files, target_date_str: str) -> dict:
     total_geral = df_res["valor"].sum()
     
     return {
-        "total_tx": len(df_res),
-        "breakdown": breakdown,
-        "recebido": recebido,
-        "descontos": descontos,
-        "pontos": pontos,
-        "vales": vales,
-        "total_geral": total_geral
+        "total_tx": len(df_res), "breakdown": breakdown, "recebido": recebido,
+        "descontos": descontos, "pontos": pontos, "vales": vales, "total_geral": total_geral
     }
 
-
 def parse_moeda_saqua(uploaded_files, target_date_str: str) -> dict:
-    """Processa as contas do Moeda Saquá identificando a conta e calculando taxas e líquidos."""
     contas_data = {}
-    
     for f in uploaded_files:
         df = load_spreadsheet_in_memory(f)
-        
         mov_col = next((c for c in df.columns if str(c).strip().upper() == "MOVIMENTO"), None)
         date_col = next((c for c in df.columns if "DATA" in str(c).strip().upper()), None)
         val_col = next((c for c in df.columns if str(c).strip().upper() == "VALOR"), None)
-        
         acc_col = next((c for c in df.columns if str(c).strip().upper() == "CONTA 1"), None)
         if not acc_col:
             acc_col = next((c for c in df.columns if "CONTA" in str(c).strip().upper() and "NOME" not in str(c).strip().upper()), None)
@@ -137,11 +111,8 @@ def parse_moeda_saqua(uploaded_files, target_date_str: str) -> dict:
         
         if conta_num not in contas_data:
             contas_data[conta_num] = {
-                "vendas_brutas": creditos,
-                "qtd_vendas": qtd_creditos,
-                "taxas": taxas,
-                "pct_taxa": pct_taxa,
-                "liquido": liquido
+                "vendas_brutas": creditos, "qtd_vendas": qtd_creditos,
+                "taxas": taxas, "pct_taxa": pct_taxa, "liquido": liquido
             }
         else:
             contas_data[conta_num]["vendas_brutas"] += creditos
@@ -155,9 +126,6 @@ def parse_moeda_saqua(uploaded_files, target_date_str: str) -> dict:
     pct_total = (abs(total_taxas) / total_bruto * 100) if total_bruto > 0 else 0.0
     
     return {
-        "contas": contas_data,
-        "total_bruto": total_bruto,
-        "total_taxas": total_taxas,
-        "pct_taxa": pct_total,
-        "total_liquido": total_liquido
+        "contas": contas_data, "total_bruto": total_bruto,
+        "total_taxas": total_taxas, "pct_taxa": pct_total, "total_liquido": total_liquido
     }
