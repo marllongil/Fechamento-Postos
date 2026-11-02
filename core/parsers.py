@@ -1,5 +1,6 @@
 import io
 import pandas as pd
+import numpy as np
 
 def load_spreadsheet_in_memory(uploaded_file) -> pd.DataFrame:
     filename = uploaded_file.name.lower()
@@ -7,9 +8,11 @@ def load_spreadsheet_in_memory(uploaded_file) -> pd.DataFrame:
     if filename.endswith(".csv"):
         for enc in ["utf-8-sig", "latin1", "cp1252", "utf-8"]:
             try:
+                uploaded_file.seek(0)
                 return pd.read_csv(io.BytesIO(file_bytes), sep=None, engine="python", encoding=enc)
             except Exception:
                 continue
+        uploaded_file.seek(0)
         return pd.read_csv(io.BytesIO(file_bytes), encoding="latin1")
     elif filename.endswith((".xlsx", ".xls", ".ods")):
         return pd.read_excel(io.BytesIO(file_bytes))
@@ -26,6 +29,30 @@ def clean_currency_series(series: pd.Series) -> pd.Series:
     str_s = str_s.str.replace(".", "", regex=False).str.replace(",", ".", regex=False)
     return pd.to_numeric(str_s, errors="coerce").fillna(0.0).astype(float)
 
+def parse_date_series(series: pd.Series) -> pd.Series:
+    """Converte datas isolando formato BR (barra) do formato ISO (traço) para evitar inversão de mês/dia."""
+    if pd.api.types.is_datetime64_any_dtype(series):
+        return series
+    
+    s = series.astype(str).str.strip()
+    s = s.replace(['nan', 'None', '', 'NaT'], np.nan)
+    
+    mask_slash = s.str.contains('/', na=False)
+    mask_dash = s.str.contains('-', na=False)
+    
+    res = pd.Series(pd.NaT, index=s.index)
+    
+    if mask_slash.any():
+        res.loc[mask_slash] = pd.to_datetime(s.loc[mask_slash], format="mixed", dayfirst=True, errors="coerce")
+    if mask_dash.any():
+        res.loc[mask_dash] = pd.to_datetime(s.loc[mask_dash], format="mixed", dayfirst=False, errors="coerce")
+        
+    mask_other = s.notna() & ~(mask_slash | mask_dash)
+    if mask_other.any():
+        res.loc[mask_other] = pd.to_datetime(s.loc[mask_other], format="mixed", errors="coerce")
+        
+    return res
+
 def parse_premmia(uploaded_files, target_date_str: str) -> dict:
     consolidated_rows = []
     for f in uploaded_files:
@@ -38,7 +65,7 @@ def parse_premmia(uploaded_files, target_date_str: str) -> dict:
         if not (date_col and val_col and pay_col):
             raise ValueError(f"Colunas do Premmia não encontradas no arquivo {f.name}.")
             
-        df["_dt"] = pd.to_datetime(df[date_col], format="mixed", dayfirst=True, errors="coerce")
+        df["_dt"] = parse_date_series(df[date_col])
         df_filtered = df[df["_dt"].dt.strftime("%d/%m/%Y") == target_date_str].copy()
         
         if df_filtered.empty:
@@ -83,7 +110,7 @@ def parse_moeda_saqua(uploaded_files, target_date_str: str) -> dict:
         acc_col = next((c for c, c_up in zip(df.columns, cols_upper) if "CONTA" in c_up and "NOME" not in c_up), None)
         
         if not (mov_col and date_col and val_col):
-            raise ValueError(f"O sistema não reconheceu as colunas do Moeda Saquá no arquivo '{f.name}'. Encontradas: {list(df.columns)}")
+            raise ValueError(f"Colunas do Moeda Saquá não encontradas no arquivo '{f.name}'. Encontradas: {list(df.columns)}")
             
         conta_num = "Conta Desconhecida"
         if acc_col and not df[acc_col].dropna().empty:
@@ -91,7 +118,7 @@ def parse_moeda_saqua(uploaded_files, target_date_str: str) -> dict:
         else:
             conta_num = f.name
             
-        df["_dt"] = pd.to_datetime(df[date_col], format="mixed", dayfirst=True, errors="coerce")
+        df["_dt"] = parse_date_series(df[date_col])
         df_filtered = df[df["_dt"].dt.strftime("%d/%m/%Y") == target_date_str].copy()
         
         if df_filtered.empty:
