@@ -12,6 +12,10 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+# Inicializa o controle de estado para o botão de reset
+if "uploader_key" not in st.session_state:
+    st.session_state.uploader_key = 0
+
 st.markdown('''
 <style>
     /* Esconder TODO o cabeçalho branco superior e menus do Streamlit */
@@ -21,19 +25,17 @@ st.markdown('''
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     
-    /* Remover o espaço vazio que fica sobrando no topo após esconder o header */
     .block-container {
         padding-top: 2rem !important;
     }
     
-    /* 2. Abas Bloqueadas/Fixas no topo (Sticky) - Agora coladas exatamente no topo */
     div[data-testid="stTabs"] {
         position: sticky;
-        top: 0rem; /* Colado perfeitamente no topo */
+        top: 0rem; 
         z-index: 999;
         background-color: #f4f6f8;
         padding-bottom: 15px;
-        padding-top: 15px; /* Adicionado um respiro superior */
+        padding-top: 15px; 
         border-bottom: 1px solid #e2e8f0;
         border-radius: 0 0 10px 10px;
         box-shadow: 0 4px 10px rgba(0,0,0,0.05);
@@ -53,7 +55,6 @@ st.markdown('''
         font-weight: 600;
     }
 
-    /* 3. Caixas mais bonitas (Sombras e Efeitos de Hover) */
     div[data-testid="stMetric"] {
         background-color: #ffffff;
         padding: 15px 10px;
@@ -98,6 +99,11 @@ st.markdown('''
         border-color: #004494;
     }
 
+    /* Botão Limpar com estilo de alerta sutil */
+    button[kind="secondary"] {
+        border-color: #e2e8f0;
+    }
+
     @keyframes fadeInUp {
         from {
             opacity: 0;
@@ -132,23 +138,23 @@ tab_premmia, tab_saqua, tab_pos = st.tabs(["App Premmia", "Moeda Saquá", "Maqui
 
 with tab_premmia:
     premmia_files = st.file_uploader(
-        f"Upload Conferência Premmia ({target_date_str})",
+        "Upload Conferência Premmia",
         type=["xlsx", "xls", "csv", "ods"],
         accept_multiple_files=True,
-        key="premmia_uploader"
+        key=f"premmia_uploader_{st.session_state.uploader_key}"
     )
-    if len(premmia_files) > 5:
+    if premmia_files and len(premmia_files) > 5:
         st.warning("Limite de 5 arquivos por vez excedido. Apenas os 5 primeiros serão processados.")
         premmia_files = premmia_files[:5]
 
 with tab_saqua:
     saqua_files = st.file_uploader(
-        f"Upload Extratos Moeda Saquá ({target_date_str})",
+        "Upload Extratos Moeda Saquá",
         type=["xlsx", "xls", "csv", "ods"],
         accept_multiple_files=True,
-        key="saqua_uploader"
+        key=f"saqua_uploader_{st.session_state.uploader_key}"
     )
-    if len(saqua_files) > 5:
+    if saqua_files and len(saqua_files) > 5:
         st.warning("Limite de 5 arquivos por vez excedido. Apenas os 5 primeiros serão processados.")
         saqua_files = saqua_files[:5]
 
@@ -158,7 +164,15 @@ with tab_pos:
 
 if saqua_files or premmia_files:
     st.markdown("---")
-    st.header(f"Dashboard de Fechamento - {target_date_str}")
+    
+    # Cabeçalho do Dashboard + Botão de Limpar
+    col_dash_title, col_dash_btn = st.columns([4, 1])
+    with col_dash_title:
+        st.header(f"Dashboard de Fechamento - {target_date_str}")
+    with col_dash_btn:
+        if st.button("🧹 Limpar / Resetar", use_container_width=True):
+            st.session_state.uploader_key += 1
+            st.rerun()
     
     try:
         res_premmia = parse_premmia(premmia_files, target_date_str) if premmia_files else None
@@ -171,6 +185,13 @@ if saqua_files or premmia_files:
     except Exception as e:
         st.error("Erro ao ler os extratos do Moeda Saquá. Verifique se os arquivos estão corretos.")
         res_saqua = None
+
+    # Verificação de planilhas lidas mas sem dados na data filtrada
+    if res_premmia is not None and res_premmia["total_tx"] == 0:
+        st.warning(f"Lemos a planilha do App Premmia, mas não achamos nenhuma venda no dia {target_date_str}.")
+        
+    if res_saqua is not None and res_saqua["total_bruto"] == 0:
+        st.warning(f"Lemos os extratos do Moeda Saquá, mas não achamos nenhuma venda no dia {target_date_str}.")
 
     dash_col1, dash_col2 = st.columns(2)
     show_premmia = res_premmia and res_premmia["total_tx"] > 0
@@ -214,7 +235,7 @@ if saqua_files or premmia_files:
             
             s1, s2, s3 = st.columns(3)
             s1.metric("Total Bruto", format_currency(res_saqua['total_bruto']))
-            s2.metric("Taxas", format_currency(res_saqua["total_taxas"]))
+            s2.metric("Taxas (2%)", format_currency(res_saqua["total_taxas"]))
             s3.metric("Líquido", format_currency(res_saqua["total_liquido"]))
 
             if res_saqua["total_bruto"] > 0:
@@ -239,15 +260,16 @@ if saqua_files or premmia_files:
                 })
             st.dataframe(pd.DataFrame(table_rows), use_container_width=True, hide_index=True)
 
-    st.markdown("---")
-    st.markdown("### Exportar Fechamento")
-    resumo_whatsapp = generate_whatsapp_summary(target_date_str, res_premmia, res_saqua)
-    st.text_area("Copiar para WhatsApp:", value=resumo_whatsapp, height=220)
-    st.download_button(
-        label="Baixar Resumo (.txt)",
-        data=resumo_whatsapp,
-        file_name=f"fechamento_{target_date_str.replace('/', '-')}.txt",
-        mime="text/plain"
-    )
+    if show_premmia or show_saqua:
+        st.markdown("---")
+        st.markdown("### Exportar Fechamento")
+        resumo_whatsapp = generate_whatsapp_summary(target_date_str, res_premmia, res_saqua)
+        st.text_area("Copiar para WhatsApp:", value=resumo_whatsapp, height=220)
+        st.download_button(
+            label="Baixar Resumo (.txt)",
+            data=resumo_whatsapp,
+            file_name=f"fechamento_{target_date_str.replace('/', '-')}.txt",
+            mime="text/plain"
+        )
 else:
     st.info("Selecione a data e insira as planilhas nas abas acima para gerar o dashboard.")

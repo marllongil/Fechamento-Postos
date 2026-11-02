@@ -4,7 +4,6 @@ import pandas as pd
 def load_spreadsheet_in_memory(uploaded_file) -> pd.DataFrame:
     filename = uploaded_file.name.lower()
     file_bytes = uploaded_file.getvalue()
-    
     if filename.endswith(".csv"):
         for enc in ["utf-8-sig", "latin1", "cp1252", "utf-8"]:
             try:
@@ -47,7 +46,6 @@ def parse_premmia(uploaded_files, target_date_str: str) -> dict:
             continue
 
         df_filtered["_val"] = clean_currency_series(df_filtered[val_col])
-            
         for _, row in df_filtered.iterrows():
             consolidated_rows.append({
                 "cliente": str(row.get("Nome", "Não informado")),
@@ -101,11 +99,9 @@ def parse_moeda_saqua(uploaded_files, target_date_str: str) -> dict:
             continue
 
         df_filtered["_val"] = clean_currency_series(df_filtered[val_col])
-            
         creditos = df_filtered[df_filtered[mov_col] == "C"]["_val"].sum()
         qtd_creditos = len(df_filtered[df_filtered[mov_col] == "C"])
         taxas = df_filtered[df_filtered[mov_col] == "T"]["_val"].sum()
-        
         liquido = creditos + taxas
         pct_taxa = (abs(taxas) / creditos * 100) if creditos > 0 else 2.00
         
