@@ -30,7 +30,6 @@ def clean_currency_series(series: pd.Series) -> pd.Series:
     return pd.to_numeric(str_s, errors="coerce").fillna(0.0).astype(float)
 
 def parse_date_series(series: pd.Series) -> pd.Series:
-    """Converte datas isolando formato BR (barra) do formato ISO (traço) para evitar inversão de mês/dia."""
     if pd.api.types.is_datetime64_any_dtype(series):
         return series
     
