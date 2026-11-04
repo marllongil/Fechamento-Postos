@@ -32,24 +32,18 @@ def clean_currency_series(series: pd.Series) -> pd.Series:
 def parse_date_series(series: pd.Series) -> pd.Series:
     if pd.api.types.is_datetime64_any_dtype(series):
         return series
-    
     s = series.astype(str).str.strip()
     s = s.replace(['nan', 'None', '', 'NaT'], np.nan)
-    
     mask_slash = s.str.contains('/', na=False)
     mask_dash = s.str.contains('-', na=False)
-    
     res = pd.Series(pd.NaT, index=s.index)
-    
     if mask_slash.any():
         res.loc[mask_slash] = pd.to_datetime(s.loc[mask_slash], format="mixed", dayfirst=True, errors="coerce")
     if mask_dash.any():
         res.loc[mask_dash] = pd.to_datetime(s.loc[mask_dash], format="mixed", dayfirst=False, errors="coerce")
-        
     mask_other = s.notna() & ~(mask_slash | mask_dash)
     if mask_other.any():
         res.loc[mask_other] = pd.to_datetime(s.loc[mask_other], format="mixed", errors="coerce")
-        
     return res
 
 def parse_premmia(uploaded_files, target_date_str: str) -> dict:
