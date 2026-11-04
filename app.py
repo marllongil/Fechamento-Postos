@@ -75,44 +75,53 @@ st.markdown('''
     }
     button[kind="secondary"] { border-color: #e2e8f0; }
     
+    /* AJUSTE DO TOAST (NOTIFICAÇÃO) PARA NÃO CORTAR O TEXTO */
+    div[data-testid="stToast"] {
+        min-width: 380px !important;
+        padding: 15px !important;
+    }
+    div[data-testid="stToast"] [data-testid="stMarkdownContainer"] p {
+        display: block !important;
+        white-space: normal !important;
+        -webkit-line-clamp: unset !important;
+        overflow: visible !important;
+        font-size: 15px;
+    }
+    
     /* Animação de Entrada do Dashboard */
     @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
     div[data-testid="stMetric"], .stDataFrame, .js-plotly-plot, .stTextArea { animation: fadeInUp 0.6s ease-out forwards; }
 
     /* ========================================================= */
     /* ESTILOS DO MODAL OVERLAY (PSEUDO-LOGIN)                   */
-    /* Usando o seletor :has() para criar o comportamento de popup */
     /* ========================================================= */
     
-    /* Transforma o container que possui o marcador na caixa do modal */
     div[data-testid="stVerticalBlock"]:has(#login-modal-marker),
     div[data-testid="stVerticalBlock"]:has(#login-animating) {
         position: fixed;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        width: 420px;
-        max-width: 90vw;
+        width: 550px; /* MAIS LARGO E MENOS APERTADO */
+        max-width: 95vw;
         z-index: 9999;
         background: #ffffff;
-        padding: 30px 20px;
-        border-radius: 16px;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+        padding: 40px; /* MAIS RESPIRO INTERNO */
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
         border: 1px solid #e2e8f0;
     }
     
-    /* Cria um fundo embaçado (overlay) sobre o dashboard */
+    /* FUNDO SÓLIDO E LIMPO (SEM BLUR POLUÍDO) */
     div[data-testid="stApp"]:has(#login-modal-marker)::before,
     div[data-testid="stApp"]:has(#login-animating)::before {
         content: "";
         position: fixed;
         top: 0; left: 0; width: 100vw; height: 100vh;
-        background: rgba(244, 246, 248, 0.75);
-        backdrop-filter: blur(6px);
+        background: #f4f6f8;
         z-index: 9998;
     }
     
-    /* Ajustes internos do form no modal para não ter bordas duplas */
     div[data-testid="stVerticalBlock"]:has(#login-modal-marker) [data-testid="stForm"],
     div[data-testid="stVerticalBlock"]:has(#login-animating) [data-testid="stForm"] {
         border: none;
@@ -120,15 +129,14 @@ st.markdown('''
         box-shadow: none;
     }
     
-    /* ANIMAÇÃO: JOGADA PRO LADO */
+    /* ANIMAÇÃO LIMPA: DESLIZA DIRETO PRO LADO E SOME */
     div[data-testid="stVerticalBlock"]:has(#login-animating) {
-        animation: throwOut 0.7s forwards cubic-bezier(0.7, -0.3, 0.2, 1.1);
+        animation: slideOutRight 0.3s forwards ease-in;
     }
     
-    @keyframes throwOut {
-        0% { transform: translate(-50%, -50%) rotate(0deg) scale(1); opacity: 1; }
-        30% { transform: translate(-55%, -45%) rotate(-3deg) scale(0.98); opacity: 1; } /* Puxadinha para trás de impulso */
-        100% { transform: translate(150vw, -100vh) rotate(35deg) scale(1.1); opacity: 0; } /* Joga pra longe */
+    @keyframes slideOutRight {
+        0% { transform: translate(-50%, -50%); opacity: 1; }
+        100% { transform: translate(150vw, -50%); opacity: 0; }
     }
 </style>
 ''', unsafe_allow_html=True)
@@ -137,7 +145,8 @@ st.markdown('''
 # SISTEMA DE NOTIFICAÇÃO (TOAST)
 # ==========================================
 if st.session_state.login_state == "pending" and not st.session_state.toast_shown:
-    st.toast("Obrigado por usar nosso aplicativo! Para acessá-lo, caso se sinta à vontade, preencha os dados no centro da tela. Isso nos ajuda a manter a organização do fechamento de caixa.", icon="🔔")
+    # TEXTO SEM EMOJIS - Aparecerá perfeitamente na lateral sem precisar clicar
+    st.toast("Obrigado por usar nosso aplicativo! Para acessá-lo, caso se sinta à vontade, preencha os dados na tela. Isso nos ajuda a manter a organização do fechamento de caixa.")
     st.session_state.toast_shown = True
 
 # ==========================================
@@ -146,17 +155,17 @@ if st.session_state.login_state == "pending" and not st.session_state.toast_show
 if st.session_state.login_state in ["pending", "animating"]:
     modal_container = st.empty()
     with modal_container.container():
-        # Injeta o marcador HTML que aciona o CSS do Modal
         if st.session_state.login_state == "pending":
             st.markdown('<div id="login-modal-marker"></div>', unsafe_allow_html=True)
         else:
             st.markdown('<div id="login-animating"></div>', unsafe_allow_html=True)
             
-        st.markdown("<h3 style='text-align: center; margin-bottom: 20px;'>🔐 Acesso ao Sistema</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='text-align: center; margin-bottom: 20px;'>Acesso ao Sistema</h3>", unsafe_allow_html=True)
         
         with st.form("login_form"):
+            # REMOVIDOS OS PLACEHOLDERS DE EXEMPLO
             nome = st.text_input("Seu Nome")
-            cargo = st.text_input("Sua Função / Cargo")
+            cargo = st.text_input("Sua Função ou Cargo")
             posto = st.text_input("Nome do Posto")
             
             st.markdown("<br>", unsafe_allow_html=True)
@@ -167,20 +176,18 @@ if st.session_state.login_state in ["pending", "animating"]:
                     st.session_state.user_nome = nome
                     st.session_state.user_cargo = cargo
                     st.session_state.user_posto = posto
-                    # Muda o estado para iniciar a animação
                     st.session_state.login_state = "animating"
                     st.rerun()
                 else:
                     st.error("Por favor, preencha todos os campos.")
 
-    # Se estiver animando, o Python espera a animação CSS acabar (0.7s) e destrói o modal
     if st.session_state.login_state == "animating":
-        time.sleep(0.7)
+        time.sleep(0.35)
         st.session_state.login_state = "authenticated"
         st.rerun()
 
 # ==========================================
-# TELA PRINCIPAL (DASHBOARD) - Renderizada no fundo
+# TELA PRINCIPAL (DASHBOARD)
 # ==========================================
 user_posto = st.session_state.get("user_posto", "Sistema de Fechamento")
 user_nome = st.session_state.get("user_nome", "Visitante")
@@ -195,9 +202,9 @@ with col_date:
 
 with col_logout:
     st.write("")
-    if st.button("Trocar Usuário / Sair", key="logout_btn", disabled=not is_auth):
+    if st.button("Trocar Usuário ou Sair", key="logout_btn", disabled=not is_auth):
         st.session_state.login_state = "pending"
-        st.session_state.toast_shown = False # Reseta o aviso para a próxima pessoa
+        st.session_state.toast_shown = False
         st.rerun()
         
 target_date_str = selected_date.strftime("%d/%m/%Y")
@@ -222,7 +229,7 @@ if (saqua_files or premmia_files) and is_auth:
     with col_dash_title:
         st.header(f"Dashboard de Fechamento - {target_date_str}")
     with col_dash_btn:
-        if st.button("🧹 Limpar Dashboard", use_container_width=True):
+        if st.button("Limpar Dashboard", use_container_width=True):
             st.session_state.uploader_key += 1
             st.rerun()
     
