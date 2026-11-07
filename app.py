@@ -13,7 +13,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Inicializa as variáveis de controle de sessão
 if "login_state" not in st.session_state:
     st.session_state.login_state = "pending"
 if "toast_shown" not in st.session_state:
@@ -28,13 +27,11 @@ is_auth = (st.session_state.login_state == "authenticated")
 # ==========================================
 st.markdown('''
 <style>
-    /* Esconder cabeçalho e rodapé do Streamlit */
     header[data-testid="stHeader"] { display: none !important; }
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     .block-container { padding-top: 2rem !important; }
     
-    /* Abas fixas */
     div[data-testid="stTabs"] {
         position: sticky; top: 0rem; z-index: 990;
         background-color: #f4f6f8; padding-bottom: 15px; padding-top: 15px; 
@@ -48,7 +45,6 @@ st.markdown('''
         font-size: 16px; font-weight: 600;
     }
     
-    /* Estilos dos Cards */
     div[data-testid="stMetric"] {
         background-color: #ffffff; padding: 15px 10px; border-radius: 12px;
         box-shadow: 0 4px 6px rgba(0,0,0,0.04); border: 1px solid #e2e8f0;
@@ -65,7 +61,6 @@ st.markdown('''
         box-shadow: 0 4px 6px rgba(0,0,0,0.04); border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0;
     }
     
-    /* Botões */
     div[data-testid="stButton"] button, div[data-testid="stDownloadButton"] button {
         transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-radius: 8px;
     }
@@ -75,7 +70,6 @@ st.markdown('''
     }
     button[kind="secondary"] { border-color: #e2e8f0; }
     
-    /* AJUSTE DO TOAST (NOTIFICAÇÃO) PARA NÃO CORTAR O TEXTO */
     div[data-testid="stToast"] {
         min-width: 380px !important;
         padding: 15px !important;
@@ -88,31 +82,25 @@ st.markdown('''
         font-size: 15px;
     }
     
-    /* Animação de Entrada do Dashboard */
     @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
     div[data-testid="stMetric"], .stDataFrame, .js-plotly-plot, .stTextArea { animation: fadeInUp 0.6s ease-out forwards; }
 
-    /* ========================================================= */
-    /* ESTILOS DO MODAL OVERLAY (PSEUDO-LOGIN)                   */
-    /* ========================================================= */
-    
     div[data-testid="stVerticalBlock"]:has(#login-modal-marker),
     div[data-testid="stVerticalBlock"]:has(#login-animating) {
         position: fixed;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        width: 550px; /* MAIS LARGO E MENOS APERTADO */
+        width: 550px;
         max-width: 95vw;
         z-index: 9999;
         background: #ffffff;
-        padding: 40px; /* MAIS RESPIRO INTERNO */
+        padding: 40px; 
         border-radius: 12px;
         box-shadow: 0 10px 40px rgba(0,0,0,0.1);
         border: 1px solid #e2e8f0;
     }
     
-    /* FUNDO SÓLIDO E LIMPO (SEM BLUR POLUÍDO) */
     div[data-testid="stApp"]:has(#login-modal-marker)::before,
     div[data-testid="stApp"]:has(#login-animating)::before {
         content: "";
@@ -129,7 +117,6 @@ st.markdown('''
         box-shadow: none;
     }
     
-    /* ANIMAÇÃO LIMPA: DESLIZA DIRETO PRO LADO E SOME */
     div[data-testid="stVerticalBlock"]:has(#login-animating) {
         animation: slideOutRight 0.3s forwards ease-in;
     }
@@ -141,11 +128,7 @@ st.markdown('''
 </style>
 ''', unsafe_allow_html=True)
 
-# ==========================================
-# SISTEMA DE NOTIFICAÇÃO (TOAST)
-# ==========================================
 if st.session_state.login_state == "pending" and not st.session_state.toast_shown:
-    # TEXTO SEM EMOJIS - Aparecerá perfeitamente na lateral sem precisar clicar
     st.toast("Obrigado por usar nosso aplicativo! Para acessá-lo, caso se sinta à vontade, preencha os dados na tela. Isso nos ajuda a manter a organização do fechamento de caixa.")
     st.session_state.toast_shown = True
 
@@ -163,7 +146,6 @@ if st.session_state.login_state in ["pending", "animating"]:
         st.markdown("<h3 style='text-align: center; margin-bottom: 20px;'>Acesso ao Sistema</h3>", unsafe_allow_html=True)
         
         with st.form("login_form"):
-            # REMOVIDOS OS PLACEHOLDERS DE EXEMPLO
             nome = st.text_input("Seu Nome")
             cargo = st.text_input("Sua Função ou Cargo")
             posto = st.text_input("Nome do Posto")
@@ -295,6 +277,16 @@ if (saqua_files or premmia_files) and is_auth:
     if show_premmia or show_saqua:
         st.markdown("---")
         st.markdown("### Exportar Fechamento")
-        resumo_whatsapp = generate_whatsapp_summary(target_date_str, res_premmia, res_saqua)
+        
+        # CHAMA O NOVO FORMATADOR PASSANDO AS VARIÁVEIS DE SESSÃO
+        resumo_whatsapp = generate_whatsapp_summary(
+            target_date_str, 
+            res_premmia, 
+            res_saqua, 
+            user_posto, 
+            user_nome, 
+            user_cargo
+        )
+        
         st.text_area("Copiar para WhatsApp:", value=resumo_whatsapp, height=220)
         st.download_button(label="Baixar Resumo (.txt)", data=resumo_whatsapp, file_name=f"fechamento_{target_date_str.replace('/', '-')}.txt", mime="text/plain")
